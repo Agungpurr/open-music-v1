@@ -1,6 +1,6 @@
 const autoBind = require("auto-bind");
 
-class Songshandler {
+class SongsHandler {
   constructor(service, validator) {
     this._service = service;
     this._validator = validator;
@@ -10,10 +10,21 @@ class Songshandler {
 
   async postSongHandler(request, h) {
     this._validator.validateSongPayload(request.payload);
-    const songId = await this._service.addSong(request.payload);
+    const { title, year, genre, performer, duration, albumId } =
+      request.payload;
+
+    const songId = await this._service.addSong({
+      title,
+      year,
+      genre,
+      performer,
+      duration,
+      albumId,
+    });
 
     const response = h.response({
       status: "success",
+      message: "Lagu Berhasil ditambahkan",
       data: {
         songId,
       },
@@ -22,67 +33,49 @@ class Songshandler {
     return response;
   }
 
-  async getSongsHandler(request) {
+  async getSongsHandler(request, h) {
     const { title, performer } = request.query;
-
-    // Pastikan parameter query diproses dengan benar untuk pencarian
-    const queryParams = {};
-    if (title) queryParams.title = title;
-    if (performer) queryParams.performer = performer;
-
-    const songs = await this._service.getSongs(queryParams);
-
-    return {
+    const songs = await this._service.getSongs({ title, performer });
+    return h.response({
       status: "success",
       data: {
         songs,
       },
-    };
+    });
   }
 
-  async getSongByIdHandler(request) {
+  async getSongByIdHandler(request, h) {
     const { id } = request.params;
     const song = await this._service.getSongById(id);
-
-    return {
+    return h.response({
       status: "success",
       data: {
         song,
       },
-    };
+    });
   }
 
-  async putSongByIdHandler(request) {
-    const { id } = request.params;
-
-    // Pastikan lagu exists terlebih dahulu sebelum validasi
-    // Ini akan throw NotFoundError jika lagu tidak ada
-    await this._service.getSongById(id);
-
-    // Baru lakukan validasi payload setelah memastikan lagu ada
+  async putSongByIdHandler(request, h) {
     this._validator.validateSongPayload(request.payload);
+    const { id } = request.params;
 
     await this._service.editSongById(id, request.payload);
 
-    return {
+    return h.response({
       status: "success",
       message: "Lagu berhasil diperbarui",
-    };
+    });
   }
 
-  async deleteSongByIdHandler(request) {
+  async deleteSongByIdHandler(request, h) {
     const { id } = request.params;
-
-    // Pastikan lagu exists sebelum menghapus
-    await this._service.getSongById(id);
-
     await this._service.deleteSongById(id);
 
-    return {
+    return h.response({
       status: "success",
       message: "Lagu berhasil dihapus",
-    };
+    });
   }
 }
 
-module.exports = Songshandler;
+module.exports = SongsHandler;
